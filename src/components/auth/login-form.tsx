@@ -17,7 +17,9 @@ import { Button } from "../ui/button"
 import { FormSuccess } from "../form-success"
 import { useState, useTransition } from "react"
 import { useRouter } from 'next/navigation'
-import { DEFAULT_LOGIN_REDIRECT } from "@/routes"
+import Cookies from 'js-cookie'
+import jwt from 'jsonwebtoken';
+// import { DEFAULT_LOGIN_REDIRECT } from "@/routes"
 import { FormError } from "../form-error"
 import { LocalLogin } from "@/actions/auth/login"
 export const LoginForm = () => {
@@ -38,12 +40,20 @@ export const LoginForm = () => {
         startTransition(async()=>{
             try {
                 const {email, password} = values;
-                await LocalLogin(email, password);
+                const res = await LocalLogin(email, password);
+                const {access_token} = res;
+                if(!access_token){
+                    throw new Error("Login failed!");
+                }
+                const decoded = jwt.decode(access_token);
+                const {exp} = decoded as {exp: number};
+                const expirationTime = exp ? new Date(exp * 1000) : Math.floor(Date.now() / 1000) + 3600;
+                Cookies.set('access_token', access_token, { expires: expirationTime });
+                // Cookies.set('access_token', access_token, { expires: 7 });
                 setSuccess('Login successfully!');
                 router.push("/test");
             } catch (error) {
-                console.log(error);
-                // setError("Login failed!");
+                setError("Login failed!");
             }
         })
     }

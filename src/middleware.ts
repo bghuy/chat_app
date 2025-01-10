@@ -4,8 +4,8 @@ import {
 } from "./routes";
 import { match } from 'path-to-regexp';
 import { NextResponse, NextRequest } from 'next/server'; 
-import jwt from 'jsonwebtoken';
-
+// import jwt from 'jsonwebtoken';
+import { decodeJwt } from 'jose';
 const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge'
 export const runtime = isEdgeRuntime ? 'edge' : 'nodejs'
 
@@ -76,7 +76,9 @@ export async function middleware(req: NextRequest) {
             try {
                 const res = await getNewAccessToken(refreshToken as string);
                 const newAccessToken = res.access_token;
-                const decodedToken = jwt.decode(newAccessToken) as jwt.JwtPayload;
+                // const decodedToken = jwt.decode(newAccessToken) as jwt.JwtPayload;
+                const decodedToken = decodeJwt(newAccessToken);
+                
                 const expirationTime = decodedToken?.exp ? new Date(decodedToken?.exp * 1000) : Math.floor(Date.now() / 1000) + 3600;
                 response.cookies.set('access_token', newAccessToken, {
                     path: '/',
