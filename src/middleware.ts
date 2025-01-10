@@ -9,11 +9,12 @@ import { decodeJwt } from 'jose';
 const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge'
 export const runtime = isEdgeRuntime ? 'edge' : 'nodejs'
 
-const baseURL = process.env.SERVER_MODE === 'production' ? process.env.SERVER_PRODUCTION_URL : process.env.SERVER_DEVELOPMENT_URL;
+const baseURL = process.env.NEXT_PUBLIC_SERVER_MODE === 'production' ? process.env.NEXT_PUBLIC_SERVER_PRODUCTION_URL : process.env.NEXT_PUBLIC_SERVER_DEVELOPMENT_URL;
 
 const getNewAccessToken = async (refreshToken: string) => {
     try {
         if(!refreshToken) throw new Error("Invalid access token");
+
         const response = await fetch(`${baseURL}/auth/refresh-token`, {
             method: 'GET',
             headers: {
@@ -23,7 +24,10 @@ const getNewAccessToken = async (refreshToken: string) => {
             credentials: 'include',
         });
         const data = await response.json();
+        console.log(data.data.access_token,"data");
+        
         const newAccessToken = data?.data?.access_token;
+        
         if(!newAccessToken) throw new Error("Access token not found");
         return newAccessToken;
     } catch (error) {
@@ -74,10 +78,10 @@ export async function middleware(req: NextRequest) {
         if(!accessToken) {
             if(!refreshToken) return NextResponse.redirect(new URL("/auth/login", nextUrl));
             try {
-                const res = await getNewAccessToken(refreshToken as string);
-                const newAccessToken = res.access_token;
+                const newAccessToken = await getNewAccessToken(refreshToken as string);
                 // const decodedToken = jwt.decode(newAccessToken) as jwt.JwtPayload;
                 const decodedToken = decodeJwt(newAccessToken);
+                console.log(decodedToken,"decodedToken");
                 
                 const expirationTime = decodedToken?.exp ? new Date(decodedToken?.exp * 1000) : Math.floor(Date.now() / 1000) + 3600;
                 response.cookies.set('access_token', newAccessToken, {
@@ -86,6 +90,8 @@ export async function middleware(req: NextRequest) {
                 });
                 return response;
             } catch (error) {
+                console.log(error);
+                
                 return NextResponse.redirect(new URL("/auth/login", nextUrl));
             }
         }
