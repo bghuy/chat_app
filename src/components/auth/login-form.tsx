@@ -14,21 +14,19 @@ import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
-// import { FormError } from "../form-error"
 import { FormSuccess } from "../form-success"
-import { login } from "../../../actions/login"
 import { useState, useTransition } from "react"
-import { redirect } from 'next/navigation'
-import { DEFAULT_LOGIN_REDIRECT } from "@/routes"
-// import { useSearchParams } from "next/navigation"
+import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'
+import jwt from 'jsonwebtoken';
+// import { DEFAULT_LOGIN_REDIRECT } from "@/routes"
+import { FormError } from "../form-error"
+import { LocalLogin } from "@/actions/auth/login"
 export const LoginForm = () => {
-    // const searchParams = useSearchParams();
-    // const urlError = searchParams?.get("error") === "OAuthAccountNotLinked"
-    //     ? "Email already in use with different provider!"
-    //     : ""
     const [isPending,startTransition] = useTransition();
-    // const [error,setError] = useState<string | undefined>("");
+    const [error,setError] = useState<string | undefined>("");
     const [success,setSuccess] = useState<string | undefined>("")
+    const router = useRouter();
     const form = useForm<z.infer<typeof LoginSchema>>({
         resolver: zodResolver(LoginSchema),
         defaultValues: {
@@ -37,15 +35,25 @@ export const LoginForm = () => {
         },
     });
     const submitForm = (values: z.infer<typeof LoginSchema>) => {
-        // setError("");
+        setError("");
         setSuccess("");
         startTransition(async()=>{
-            const response = await login(values);
-            // setError(response.error || "");
-            setSuccess(response.success || "");
-
-            if (response.success) {
-                redirect(DEFAULT_LOGIN_REDIRECT);
+            try {
+                const {email, password} = values;
+                const res = await LocalLogin(email, password);
+                const {access_token} = res;
+                if(!access_token){
+                    throw new Error("Login failed!");
+                }
+                const decoded = jwt.decode(access_token);
+                const {exp} = decoded as {exp: number};
+                const expirationTime = exp ? new Date(exp * 1000) : Math.floor(Date.now() / 1000) + 3600;
+                Cookies.set('access_token', access_token, { expires: expirationTime });
+                // Cookies.set('access_token', access_token, { expires: 7 });
+                setSuccess('Login successfully!');
+                router.push("/test");
+            } catch (error) {
+                setError("Login failed!");
             }
         })
     }
@@ -100,7 +108,7 @@ export const LoginForm = () => {
                             )}
                         />
                     </div>
-                    {/* <FormError message={error || urlError}/> */}
+                    <FormError message={error}/>
                     <FormSuccess message={success}/>
                     <Button 
                         className="w-full"

@@ -4,13 +4,15 @@ const isServer = typeof window === 'undefined';
 
 
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: process.env.PRODUCTION_MODE ? process.env.SERVER_PRODUCTION_URL : process.env.SERVER_DEVELOPMENT_URL,
+  baseURL: process.env.NEXT_PUBLIC_PRODUCTION_MODE ? process.env.NEXT_PUBLIC_SERVER_PRODUCTION_URL : process.env.NEXT_PUBLIC_SERVER_DEVELOPMENT_URL,
   timeout: 10000,
   withCredentials: true,
 });
 
 // Request Interceptor
 axiosInstance.interceptors.request.use(
+    
+  
   async (config: InternalAxiosRequestConfig) => {
     let token: string | undefined;
 
