@@ -14,21 +14,17 @@ import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
-// import { FormError } from "../form-error"
 import { FormSuccess } from "../form-success"
-import { login } from "../../../actions/login"
 import { useState, useTransition } from "react"
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { DEFAULT_LOGIN_REDIRECT } from "@/routes"
-// import { useSearchParams } from "next/navigation"
+import { FormError } from "../form-error"
+import { LocalLogin } from "@/actions/auth/login"
 export const LoginForm = () => {
-    // const searchParams = useSearchParams();
-    // const urlError = searchParams?.get("error") === "OAuthAccountNotLinked"
-    //     ? "Email already in use with different provider!"
-    //     : ""
     const [isPending,startTransition] = useTransition();
-    // const [error,setError] = useState<string | undefined>("");
+    const [error,setError] = useState<string | undefined>("");
     const [success,setSuccess] = useState<string | undefined>("")
+    const router = useRouter();
     const form = useForm<z.infer<typeof LoginSchema>>({
         resolver: zodResolver(LoginSchema),
         defaultValues: {
@@ -37,15 +33,17 @@ export const LoginForm = () => {
         },
     });
     const submitForm = (values: z.infer<typeof LoginSchema>) => {
-        // setError("");
+        setError("");
         setSuccess("");
         startTransition(async()=>{
-            const response = await login(values);
-            // setError(response.error || "");
-            setSuccess(response.success || "");
-
-            if (response.success) {
-                redirect(DEFAULT_LOGIN_REDIRECT);
+            try {
+                const {email, password} = values;
+                await LocalLogin(email, password);
+                setSuccess('Login successfully!');
+                router.push("/test");
+            } catch (error) {
+                console.log(error);
+                // setError("Login failed!");
             }
         })
     }
@@ -100,7 +98,7 @@ export const LoginForm = () => {
                             )}
                         />
                     </div>
-                    {/* <FormError message={error || urlError}/> */}
+                    <FormError message={error}/>
                     <FormSuccess message={success}/>
                     <Button 
                         className="w-full"
